@@ -1,0 +1,116 @@
+---
+title: "Practical 2"
+author: "Cesare Miglioli"
+date: "17 febbraio 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Exercise 3 
+
+## Part (a)
+
+Run the commands already present in *practical_02.rmd* (i.e. this file) to load the dataset and retrieve the important variables.
+
+```{r}
+
+require(foreign)  # install foreign package if you do not have it yet
+
+# See section 1.6.2 e-book for further information
+
+dat = read.spss("Zambia.SAV")
+
+# Construct system matrix
+# Extract response variable i.e. HW70 Height for age standard deviation (according to WHO)
+y = dat$HW70
+y[y == 9996] = NA
+y[y == 9997] = NA
+y[y == 9998] = NA
+y[y == 9999] = NA
+
+# Revert tranformation (i.e. z-score)
+y = y/100
+
+# Variable 1: The calculated months of breastfeeding gives the duration of breastfeeding
+x1 = dat$M5
+x1[x1 == 94] = 0
+x1[x1 == 97] = NA
+x1[x1 == 98] = NA
+x1[x1 == 99] = NA
+x1[x1 > 40] = NA
+
+# Variable 2: Age in months of the child
+x2 = dat$HW1
+
+# Variable 3: Age of the mother at birth
+x3 = dat$V012 - dat$B8
+x3[x3>45] = NA
+
+# Variable 4: Body mass index (BMI) of the mother
+x4 = dat$V445
+
+# Variable 5: Height of the respondent in centimeters
+x5 = dat$V438
+x5[x5 == 9998] = NA
+x5[x5 == 9999] = NA
+x5[x5 < 1300] = NA
+x5[x5 > 1900] = NA
+
+# Variable 6: Weight of the respondent in kilograms
+x6 = dat$V437
+
+# Variable 7: De facto region of residence
+x7 = as.factor(dat$V101)
+
+
+x7 = model.matrix(~x7-1)
+
+dim(x7)
+
+# Variable 8: Mother highest education level attended
+x8 = as.factor(dat$V106)
+x8 = model.matrix(~x8-1)
+
+dim(x8)
+
+# Variable 9: Wealth index factor score
+x9 = dat$V191
+
+# Variable 10: Weight of child at birth given in kilograms with three implied decimal places
+x10 = dat$M19
+x10[x10 == 9996] = NA
+x10[x10 == 9997] = NA
+x10[x10 == 9998] = NA
+x10[x10 == 9999] = NA
+x10 = x10/1000
+
+# Variable 11: Child Sex
+x11 = dat$B4
+
+# Variable 12: Preceding birth interval is calculated as the difference in months between the current birth and the previous birth
+x12 = dat$B11
+x12[x12 > 125] = NA
+
+# Variable 13: Drinking Water
+x13 = dat$V113
+x13 = model.matrix(~x13-1)
+x13 = x13[,c(2,3,4,8,9,13,17,18)]
+
+
+mat.sys = na.omit(cbind(y,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13))
+dim(mat.sys)[1]
+
+
+# Number of regressor
+p = dim(mat.sys)[2]
+
+# Construct X and Y
+y = mat.sys[,1]
+X = mat.sys[,2:p]
+
+
+```
+
