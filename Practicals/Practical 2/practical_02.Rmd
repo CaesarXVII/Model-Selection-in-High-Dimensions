@@ -21,7 +21,7 @@ require(foreign)  # install foreign package if you do not have it yet
 
 # See the e-book section on Examples in Chapter 1 for further information
 
-dat = read.spss("Zambia.SAV")
+dat = read.spss("etc.\Zambia.SAV")  #Put the right extension on your downloaded Zambia.sav
 
 # Construct system matrix
 # Extract response variable i.e. HW70 Height for age standard deviation (according to WHO)
