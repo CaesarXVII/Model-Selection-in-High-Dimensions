@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Part (a)
 
-Run the commands already present in *practical_02.rmd* (i.e. this file) to load the dataset and retrieve the important variables.
+Load the dataset and build the variables so that they can be used for a regression analysis.
 
 ```{r}
 
