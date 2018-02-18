@@ -19,7 +19,7 @@ Load the dataset and build the variables so that they can be used for a regressi
 
 require(foreign)  # install foreign package if you do not have it yet
 
-# See section 1.6.2 e-book for further information
+# See the e-book section on Examples in Chapter 1 for further information
 
 dat = read.spss("Zambia.SAV")
 
