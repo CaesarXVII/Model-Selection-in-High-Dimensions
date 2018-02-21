@@ -11,8 +11,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Exercise 3 
 
-This is a new text a solution
-
 ## Part (a)
 
 Load the dataset and build the variables so that they can be used for a regression analysis.
