@@ -9,6 +9,9 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+This is the first part of group A
+
+
 # Exercise 3 
 
 ## Part (a)
