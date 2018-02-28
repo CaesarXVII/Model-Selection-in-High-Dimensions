@@ -5,6 +5,9 @@ date: "26 de fevereiro de 2018"
 output: pdf_document
 ---
 
+
+
+add some coments
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
