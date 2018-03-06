@@ -1,0 +1,310 @@
+---
+title: "Practice 3"
+author: "Alexander Maslev, Hanxiong Wang, Minyoung Lee"
+date: "2018/ 3/ 5"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Simulations and CV
+
+```{r include=FALSE,echo=FALSE,message = FALSE}
+library(MASS)
+```
+
+
+### a) Generate from a MVN (multivariate normal) a matrix $X_{n*p}$ with n = 1000 and p = 5. You can choose the location vector as you wish but set the scale matrix as the identity.
+
+We have chosen the location vector [2,4,6,8,10] and scale matrix as he identity
+
+```{r,echo=FALSE}
+n<-1000
+p<-5
+Mu<-c(2,4,6,8,10) # location vector
+sigma<-diag(5) # scale matrix as the identity
+X<-mvrnorm(n , Mu, sigma)
+```
+
+### b) Choose the generating vector $\beta$ = [3 1.5 0 2 0] and retrieve the signal to noise ratio of this setting.
+
+We found in Wikipedia that definition of SNR is as the reciprocal of the coefficient of variation, i.e., the ratio of mean to standard deviation of a signal or measurement :
+$$SNR = \frac{\mu}{\sigma}$$
+where $\mu$  is the signal mean or expected value and $\sigma$ is the standard deviation of the noise.
+
+```{r,echo=FALSE}
+beta<-c(3,1.5,0,2,0)
+e<-rnorm(n, mean = 0, sd = 1)
+
+SNR<-mean(X%*%beta)/var(e)
+
+```
+
+### c) Generate $\hat{y}$ thanks to the relation $y = X_{n*p}\beta+\epsilon$ where $\epsilon_{i}$ is a standard normal, n = 1000 and p = 5. Suppose for simplicity that the errors are uncorrelated.
+
+```{r,echo=FALSE}
+
+Y_hat<-X%*%beta+e
+
+```
+
+### d) Split the data randomly in two halves (k=2) and use the training set to determine $\hat{\beta}_{MLE}$. Then, making use of the specific loss function of the linear regression, calculate the test set cross validation score for each possible model. Conclude on the best model.
+
+```{r,echo=FALSE}
+
+index <- sample(1:n, size=0.5*n)
+
+# Split data
+y_train<- Y_hat[-index,]
+x_train<-X[-index,]
+y_test<- Y_hat[index,]
+x_test<-X[index,]
+
+index_sub_choose<-c(1,2,3,4,5)
+sub_matrix <- matrix(data = NA,ncol = 5,nrow = 31)
+t=0
+for(i in 1:5)
+{
+  index_matrix <- combn(index_sub_choose,i)
+  for(j in 1:ncol(index_matrix))
+  {
+    t <- t+1
+    index_sub <- index_matrix[,j]
+    sub_matrix[t,c(index_sub)]  <-  1
+  }
+}
+
+k<-nrow(sub_matrix)
+cv <- matrix(data=NA,nrow = k,ncol = 1)
+for(j in 1:k){
+  Xsub    <-x_train[,which(sub_matrix[j,]==1)]
+  betaMLE <-solve(t(Xsub)%*%Xsub)%*%t(Xsub)%*%y_train
+  new_Y   <-x_test[,which(sub_matrix[j,]==1)]%*%betaMLE
+  cv[j,]      <- t(y_test-new_Y)%*%(y_test-new_Y)
+  
+}
+
+BEST_cv<-which(sub_matrix[which.min(cv),]==1)
+BEST_cv
+Xsub_cv<-x_train[,BEST_cv]
+betaMLE_cv<-solve(t(Xsub_cv)%*%Xsub_cv)%*%t(Xsub_cv)%*%y_train
+betaMLE_cv
+```
+
+Each time it changed but most of the times we have best model when p=5. But the beta is not close to generating vector $\beta$ = [3 1.5 0 2 0]. One example of our estimator is $\hat{\beta}_{MLE}$ =[0.04162341 0.50722856 0.64142912 1.05097892 1.36093090]. 
+
+### e) Suppose now that we increase the size of $\beta$ to 100 (i.e. p = 100 ). Calculate the number of possible models together with an estimate of the time needed for an exhaustive search (hint: use previous results). Conclude on the feasibility of the task.
+
+```{r,echo=FALSE}
+vec=rep(0,100)
+for (i in 1:100) {
+  vec[i]=choose(100,i)
+}
+sum(vec)
+sum(vec)/31*0.1691079
+
+```
+
+When we run a CV process with p=5, it takes 0.1691079 seconds. When we have p = 5, we can have 31 different models. But when increase the p to 100, we have 1.26e+30 different models. Thus it will take approximately 1.9e+24 hours. This is the case when we do the k=2 cross validation. But if we increase the number of k, then it will drastically increase the time needed. Thus we think this task to do all the combination of the model when p = 100 is not feasible. 
+
+## Simulations and AIC
+
+### a) Retrieve the values found up to point (c) of exercise 1.
+
+```{r, echo=FALSE}
+n<-1000
+p<-5
+Mu<-c(2,4,6,8,10) # location vector
+sigma<-diag(5) # scale matrix as the identity
+X<-mvrnorm(n , Mu, sigma)
+
+beta<-c(3,1.5,0,2,0)
+e<-rnorm(n, mean = 0, sd = 1)
+SNR<-mean(X%*%beta)/var(e)
+
+Y_hat<-X%*%beta+e
+```
+
+
+### b) Calculate the AIC for all possible models when p = 5 without using the predefined function present in R. Conclude on the best model.
+
+```{r,echo=FALSE}
+index_sub_choose<-c(1,2,3,4,5)
+sub_matrix <- matrix(data = NA,ncol = 5,nrow = 31)
+t=0
+for(i in 1:5)
+{
+  index_matrix <- combn(index_sub_choose,i)
+  for(j in 1:ncol(index_matrix))
+  {
+    t <- t+1
+    index_sub <- index_matrix[,j]
+    sub_matrix[t,c(index_sub)]  <-  1
+  }
+}
+
+# AIC
+RSS<-rep(0,k)
+AIC<-rep(0,k)
+k<-nrow(sub_matrix)
+for(j in 1:k){
+Xsub<-as.matrix(X[,which(sub_matrix[j,]==1)])
+betaMLE<-solve(t(Xsub)%*%Xsub)%*%t(Xsub)%*%Y_hat
+new_Y<-Xsub%*%betaMLE
+for(i in 1:(n/2)){
+  RSS[j]<-RSS[j]+(new_Y[i]-Y_hat[i])^2
+}
+AIC[j]<-RSS[j]/var(e)+2*ncol(Xsub)
+}
+BEST<-which(sub_matrix[which.min(AIC),]==1)
+BEST
+Xsub<-as.matrix(X[,BEST])
+betaMLE<-solve(t(Xsub)%*%Xsub)%*%t(Xsub)%*%Y_hat
+betaMLE
+```
+
+Each time it changed but most of the times we have best model when p=4 with position[1 2 4 5]. The estimated beta is very close to generating vector $\beta$ = [3 1.5 0 2 0]. One example of our estimator is $\hat{\beta}_{MLE}$ =[ 2.92933647 1.51528244  2.05023262  -0.02858364]. 
+
+### c) As for the previous exercise, suppose now that we increase the size of $\beta$ to 100 (i.e. p = 100). Conclude on the feasibility of the task.
+
+```{r,echo=FALSE}
+vec=rep(0,100)
+for (i in 1:100) {
+  vec[i]=choose(100,i)
+}
+sum(vec)
+sum(vec)/31*0.2441621
+9.984266e+27/60/60
+
+```
+
+As we computed in point (e) in exercise 1, when p = 100, we have 1.26e+30 different model. The time needed to run the AIC process with p = 5 takes 0.2441621 seconds. And, when we calculate the time that we needed to run when p = 100, this is approximately 2.7e+24 hours. Thus we think that the task to do all the combination of the model when p = 100 is not feasible. 
+
+
+### d) Compare the performance of CV and AIC by replicating 100 times the tasks of Exercise 1 and 2. In particular you should evaluate three specific criteria: the proportion of times the correct model is selected (Exact), the proportion of times the selected model contains the correct one (Correct) and the average number of selected regressors (Average #).
+
+```{r,echo=FALSE}
+
+## Rep 100 times AIC
+
+cv <- matrix(data=NA,nrow = k,ncol = 1)
+Exact<-data.frame(t(c(0,0)))
+colnames(Exact)<-c("AIC","CV")
+AverageN<-matrix(NA,nrow=100,ncol = 2)
+colnames(AverageN)<-c("AIC","CV")
+Correct<-data.frame(t(c(0,0)))
+colnames(Correct)<-c("AIC","CV")
+
+for(l in 1:100){
+  
+### SETTING ###
+  n<-1000
+  p<-5
+  Mu<-c(2,4,6,8,10) # location vector
+  sigma<-diag(5) # scale matrix as the identity
+  X<-mvrnorm(n , Mu, sigma)
+  beta<-c(3,1.5,0,2,0)
+  e<-rnorm(n, mean = 0, sd = 1)
+  Y_hat<-X%*%beta+e
+
+### AIC ###    
+  RSS<-rep(0,k)
+  AIC<-rep(0,k)
+
+  for(j in 1:k){
+    Xsub<-as.matrix(X[,which(sub_matrix[j,]==1)])
+    betaMLE<-solve(t(Xsub)%*%Xsub)%*%t(Xsub)%*%Y_hat
+    new_Y<-Xsub%*%betaMLE
+    for(i in 1:(n/2)){
+      RSS[j]<-RSS[j]+(new_Y[i]-Y_hat[i])^2
+    }
+    AIC[j]<-RSS[j]/var(e)+2*ncol(Xsub)
+  }
+  BEST<-sub_matrix[which.min(AIC),]
+  BEST[is.na(BEST)] <-0
+  if(sum(BEST-c(1,1,0,1,0))==0){
+    
+    Exact[1]<-Exact[1]+1
+    
+  }
+  if(sum((BEST[c(1,2,4)]-c(1,1,1)))==0){
+    Correct[1]<-Correct[1]+1
+  }
+    AverageN[l,1]<-sum(BEST)
+  
+  
+### CV ###
+  index <- sample(1:n, size=0.5*n)
+  y_train<- Y_hat[-index,]
+  x_train<-X[-index,]
+  y_test<- Y_hat[index,]
+  x_test<-X[index,]
+  
+  for(j in 1:k){
+    Xsub    <-x_train[,which(sub_matrix[j,]==1)]
+    betaMLE <-solve(t(Xsub)%*%Xsub)%*%t(Xsub)%*%y_train
+    new_Y   <-x_test[,which(sub_matrix[j,]==1)]%*%betaMLE
+    cv[j,]      <- t(y_test-new_Y)%*%(y_test-new_Y)
+    
+  }
+  
+  BEST_cv<-sub_matrix[which.min(cv),]
+  BEST_cv[is.na(BEST_cv)] <-0
+  if(sum(BEST_cv-c(1,1,0,1,0))==0){
+    
+    Exact[2]<-Exact[2]+1
+    
+  }
+  if(sum((BEST_cv[c(1,2,4)]-c(1,1,1)))==0){
+    Correct[2]<-Correct[2]+1
+  }
+    AverageN[l,2]<-sum(BEST_cv)
+   
+}
+
+Exact/100
+Correct/100
+colMeans(AverageN)
+
+```
+
+In this part, we simulated the AIC process and the CV process for 100 times and evaluate three criteria. In the simulation, we have used the random resampling method for the selection of the data. By the simulation we got the result as following. Firstly, the Exact of AIC is better than CV which are 0.76 in AIC and 0.26 in CV. Secondly, the Correct is same that both of the process has 1 for the proportion which means we always getting correct regressors. Lastly, the average number of regressors are 3.21 for the AIC and 2.76 for the CV. 
+
+## 3 Real data application
+
+### Load the Zambia dataset and perform an exhaustive search on the continuous covariates (i.e. avoiding factors) based on CV and AIC in order to find the best model. You can either employ your codes derived in Exercise 1 and 2 or make use of the existing R packages: leaps, glmulti, MuMIn and caret.
+
+```{r include=FALSE,echo=FALSE,message = FALSE}
+rm(list=ls())
+library(MASS)
+require(foreign)
+require(leaps)
+require(caret)
+require(glmulti)
+library(mboost)
+set.seed(101)
+
+load("malnutrion_zambia_cleaned.Rda")
+data_zam2=data_zambia[,c(1:7,21:22,24)] #removing factors
+
+attach(data_zam2)
+
+#setting up 10-fold cross-validation
+control <- trainControl(method="cv", number=10) 
+
+#finding the ideal model by AIC criterion
+model_AIC = train(`Height for age sd`~.,data=data_zam2,method="lmStepAIC",trControl=control)
+
+#finding the ideal model by mean square error
+modelCV = train(`Height for age sd`~.,data=data_zam2,method="lm",trControl=control)
+```
+
+
+```{r,echo=FALSE}
+summary(model_AIC)
+summary(modelCV)
+```
+With Zambia data set, We have done the model selection using two different criteria which are AIC and CV. All variables remain in the final model when optimized by AIC except the height of the mother. All variables remain in the final model selected by mean-squared error
+
