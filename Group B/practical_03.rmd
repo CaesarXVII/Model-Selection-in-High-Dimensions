@@ -38,7 +38,7 @@ where $\mu$  is the signal mean or expected value and $\sigma$ is the standard d
 beta<-c(3,1.5,0,2,0)
 e<-rnorm(n, mean = 0, sd = 1)
 
-SNR<-mean(X%*%beta)/var(e)
+SNR<-mean(X%*%beta)/sqrt(var(e))
 
 ```
 
@@ -62,8 +62,8 @@ x_train<-X[-index,]
 y_test<- Y_hat[index,]
 x_test<-X[index,]
 
-index_sub_choose<-c(1,2,3,4,5)
-sub_matrix <- matrix(data = NA,ncol = 5,nrow = 31)
+index_sub_choose<-c(1:p)
+sub_matrix <- matrix(data = NA,ncol = p,nrow = 2^p-1)
 t=0
 for(i in 1:5)
 {
