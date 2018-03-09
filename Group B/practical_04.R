@@ -72,5 +72,18 @@ betaMLE<-solve(t(Xsub)%*%Xsub)%*%t(Xsub)%*%Y_hat
 betaMLE
 
 
+load("C:/Users/user/Desktop/Spring2018/ModelSelection/Model-Selection-in-High-Dimensions/Practicals/Practical 4/data_leukemia_reduced.Rda")
+Leukemia<-data_leukemia_reduced
+Leukemia<-data.frame(Leukemia)
+model<-glm(y~.,family=binomial("logit"),data=Leukemia,maxit=100)
 
+plot(Leukemia[,1],Leukemia[,12])
 
+library(glmnet)
+X<-as.matrix(Leukemia[,2:11])
+Y<-as.matrix(Leukemia[,1])
+fit<-glmnet(X,Y,family = "binomial")
+summary(fit)
+pred<-predict(fit,X,type="class")
+pred_coef<-predict(fit,type="coefficient")
+cbind(predict(fit,X,type="class",s=2),Y)
