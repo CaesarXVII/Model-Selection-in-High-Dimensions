@@ -1,0 +1,76 @@
+library(MASS)
+p<-5
+rho<-0.7
+n<-1000
+sigma<-matrix(0,p,p)
+for(i in 1:p){for(j in 1:p){
+sigma[i,j]<-rho^abs(i-j)}}
+
+Mu<-c(2,4,6,8,10) # location vector
+X<-mvrnorm(n , Mu, sigma)
+
+beta<-c(3,1.5,0,2,0)
+e<-rnorm(n, mean = 0, sd = 1)
+SNR<-mean(X%*%beta)/sqrt(var(e))
+
+Y_hat<-X%*%beta+e
+
+index <- sample(1:n, size=0.5*n)
+
+# Split data
+y_train<- Y_hat[-index,]
+x_train<-X[-index,]
+y_test<- Y_hat[index,]
+x_test<-X[index,]
+
+index_sub_choose<-c(1:p)
+sub_matrix <- matrix(data = NA,ncol = p,nrow = 2^p-1)
+t=0
+for(i in 1:5)
+{
+  index_matrix <- combn(index_sub_choose,i)
+  for(j in 1:ncol(index_matrix))
+  {
+    t <- t+1
+    index_sub <- index_matrix[,j]
+    sub_matrix[t,c(index_sub)]  <-  1
+  }
+}
+
+k<-nrow(sub_matrix)
+cv <- matrix(data=NA,nrow = k,ncol = 1)
+for(j in 1:k){
+  Xsub    <-x_train[,which(sub_matrix[j,]==1)]
+  betaMLE <-solve(t(Xsub)%*%Xsub)%*%t(Xsub)%*%y_train
+  new_Y   <-x_test[,which(sub_matrix[j,]==1)]%*%betaMLE
+  cv[j,]      <- t(y_test-new_Y)%*%(y_test-new_Y)
+  
+}
+
+BEST_cv<-which(sub_matrix[which.min(cv),]==1)
+BEST_cv
+Xsub_cv<-x_train[,BEST_cv]
+betaMLE_cv<-solve(t(Xsub_cv)%*%Xsub_cv)%*%t(Xsub_cv)%*%y_train
+betaMLE_cv
+
+RSS<-rep(0,k)
+AIC<-rep(0,k)
+k<-nrow(sub_matrix)
+for(j in 1:k){
+  Xsub<-as.matrix(X[,which(sub_matrix[j,]==1)])
+  betaMLE<-solve(t(Xsub)%*%Xsub)%*%t(Xsub)%*%Y_hat
+  new_Y<-Xsub%*%betaMLE
+  for(i in 1:(n/2)){
+    RSS[j]<-RSS[j]+(new_Y[i]-Y_hat[i])^2
+  }
+  AIC[j]<-RSS[j]/var(e)+2*ncol(Xsub)
+}
+BEST<-which(sub_matrix[which.min(AIC),]==1)
+BEST
+Xsub<-as.matrix(X[,BEST])
+betaMLE<-solve(t(Xsub)%*%Xsub)%*%t(Xsub)%*%Y_hat
+betaMLE
+
+
+
+
