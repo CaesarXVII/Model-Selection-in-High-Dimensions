@@ -1,5 +1,5 @@
 ---
-title: "Correlation, Efron???s q-class and ROC Curves"
+title: "Correlation, Efron's q-class and ROC Curves"
 author: "Cecilia Galvan and Nensi Kopellaj"
 date: "09 03 2018"
 output: html_document
