@@ -11,6 +11,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### EXERCISE 1 
 replicate Exercise 1,2 from practical 3
+```{r}
+library(MASS)
+library(mvtnorm)
+```
+
 
 ```{r,echo=FALSE}
 
@@ -138,7 +143,7 @@ We have similar values of Exact and Correct and CV regardless of rho. We have AI
 Firs we input the data and use "glm" to build the general linear model. Because we need to use that to predict the data set
 ```{r}
 ## load the data  ##
-setwd("D:/Gen?ve Universit?/High Dimention Data/practical_4")
+
 load("data_leukemia_reduced.Rda")
 data <- data_leukemia_reduced
 str(data)
@@ -175,8 +180,8 @@ colnames(comp_pre_rea) <- c("real","predict")
 
 #
 t<-table(comp_pre_rea)
-tp[i,1] <- t[1,1]/25
-np[i,1] <- t[2,1]/47
+tp <- t[1,1]/25
+fp <- t[2,1]/47
 
 ```
 
