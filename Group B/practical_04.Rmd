@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### EXERCISE 1 
 replicate Exercise 1,2 from practical 3
+
 ```{r,echo=FALSE}
 
 n<-1000
@@ -129,7 +130,114 @@ Average
 
 ```
 
-We have similar values of Exact and Correct and CV regardless of rho.
+We have similar values of Exact and Correct and CV regardless of rho. We have AIC better than CV. 
+
+### EXERCISE 3
+
+#### a)
+Firs we input the data and use "glm" to build the general linear model. Because we need to use that to predict the data set
+```{r}
+## load the data  ##
+setwd("D:/Gen?ve Universit?/High Dimention Data/practical_4")
+load("data_leukemia_reduced.Rda")
+data <- data_leukemia_reduced
+str(data)
+plot(data)
+
+## a ##
+## use glm to make a regression ##
+glm_1 <- glm(formula = y ~ V980 ,family = binomial,data = data )
+summary(glm_1)
+
+```
+
+#### b)
+In this pare we need to modify the type of data. And create a contingency tables and shows [1,1] is true positive; [0,1] is false positive; [0,0] is false negative ;[1,0] is the true negative.The table is in t. And in the end we get tp (Predict positive and the real value is positive ), np (. Predict positive and the real value is negative ).
+```{r}
+## b ##
+data_pre <- data.frame(data$V980)
+colnames(data_pre)<- "V980"
+classify_pre_number <- predict(object = glm_1,newdata = data_pre,type = "response" )
+classify_pre_number <- as.data.frame(classify_pre_number)
+#Set the cut-of value v980<0.5 is "1"
+
+# here we choose c is euqal to 0.5
+c <- 0.5
+#Create an empaty matrix to store the data
+classify_pre    <-matrix(data = NA,nrow = 72,ncol = 1)
+classify_pre[c(which(classify_pre_number<=c)),1]<-0 
+classify_pre[c(which(classify_pre_number>c)),1]<-1
+
+comp_pre_rea <- cbind(data[,1],classify_pre)
+comp_pre_rea <- data.frame(comp_pre_rea)
+
+colnames(comp_pre_rea) <- c("real","predict")
+
+#
+t<-table(comp_pre_rea)
+tp[i,1] <- t[1,1]/25
+np[i,1] <- t[2,1]/47
+
+```
+
+
+#### c)
+In these part we try different c and create the curve the c we choose is from 0.01 to 1 and each step 0.1, after get these values we can create the curve
+
+```{r}
+#### c ####
+## creat the curve ##
+
+tp <- matrix(data = NA,nrow = 100,ncol = 1)
+fp <- matrix(data = NA,nrow = 100,ncol = 1)
+
+for(i in 1:100){
+  c <- i*0.01
+  
+  
+  #Create an empaty matrix to store the data
+  classify_pre    <-matrix(data = NA,nrow = 72,ncol = 1)
+  classify_pre[c(which(classify_pre_number<=c)),1]<-0 
+  classify_pre[c(which(classify_pre_number>c)),1]<-1
+  
+  comp_pre_rea <- cbind(data[,1],classify_pre)
+  comp_pre_rea <- data.frame(comp_pre_rea)
+  
+  colnames(comp_pre_rea) <- c("real","predict")
+  
+  t<-table(comp_pre_rea)
+  tp[i,1] <- t[1,1]/25
+  fp[i,1] <- t[2,1]/47
+  
+}
+## result of the curve ##
+plot(x = fp,y = tp )
+
+```
+
+
+#### d)
+In this part we can compare the curve between the curve we build and from the package we get. By comparing the two plot we find these are similar.
+```{r}
+## d ##
+library("pROC", lib.loc="~/R/win-library/3.3")
+response <- comp_pre_rea[,1]
+predictor <- a
+rocobj <- roc(response, predictor) # Very slow!
+
+fp_pack <- 1-rocobj$sensitivities
+tp_pack <- rocobj$specificities
+
+#plot from the package
+plot(x = fp_pack,y = tp_pack)
+
+```
+
+plot we build
+
+```{r}
+plot(x = fp,y = tp )
+```
 
 
 
