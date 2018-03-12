@@ -225,9 +225,9 @@ plot(x = fp,y = tp )
 In this part we can compare the curve between the curve we build and from the package we get. By comparing the two plot we find these are similar.
 ```{r}
 ## d ##
-library("pROC", lib.loc="~/R/win-library/3.3")
+library("pROC")
 response <- comp_pre_rea[,1]
-predictor <- a
+predictor <- comp_pre_rea[,2]
 rocobj <- roc(response, predictor) # Very slow!
 
 fp_pack <- 1-rocobj$sensitivities
