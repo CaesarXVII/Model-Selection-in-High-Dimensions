@@ -156,6 +156,7 @@ summary(glm_1)
 
 ```
 
+
 #### b)
 In this pare we need to modify the type of data. And create a contingency tables and shows [1,1] is true positive; [0,1] is false positive; [0,0] is false negative ;[1,0] is the true negative.The table is in t. And in the end we get tp (Predict positive and the real value is positive ), np (. Predict positive and the real value is negative ).
 ```{r}
@@ -180,8 +181,11 @@ colnames(comp_pre_rea) <- c("real","predict")
 
 #
 t<-table(comp_pre_rea)
-tp <- t[1,1]/25
-fp <- t[2,1]/47
+print("TP")
+t[1,1]/25
+
+print("FP")
+t[2,1]/47
 
 ```
 
@@ -197,20 +201,20 @@ tp <- matrix(data = NA,nrow = 100,ncol = 1)
 fp <- matrix(data = NA,nrow = 100,ncol = 1)
 
 for(i in 1:100){
-  c <- i*0.01
+  q <- i*0.01
   
   
   #Create an empaty matrix to store the data
-  classify_pre    <-matrix(data = NA,nrow = 72,ncol = 1)
-  classify_pre[c(which(classify_pre_number<=c)),1]<-0 
-  classify_pre[c(which(classify_pre_number>c)),1]<-1
+  classify_pre_rp    <-matrix(data = NA,nrow = 72,ncol = 1)
+  classify_pre_rp[c(which(classify_pre_number<=q)),1]<-0 
+  classify_pre_rp[c(which(classify_pre_number>q)),1]<-1
   
-  comp_pre_rea <- cbind(data[,1],classify_pre)
-  comp_pre_rea <- data.frame(comp_pre_rea)
+  comp_pre_rea_rp <- cbind(data[,1],classify_pre_rp)
+  comp_pre_rea_rp <- data.frame(comp_pre_rea_rp)
   
-  colnames(comp_pre_rea) <- c("real","predict")
+  colnames(comp_pre_rea_rp) <- c("real","predict")
   
-  t<-table(comp_pre_rea)
+  t<-table(comp_pre_rea_rp)
   tp[i,1] <- t[1,1]/25
   fp[i,1] <- t[2,1]/47
   
@@ -225,9 +229,9 @@ plot(x = fp,y = tp )
 In this part we can compare the curve between the curve we build and from the package we get. By comparing the two plot we find these are similar.
 ```{r}
 ## d ##
-library("pROC")
+library("pROC", lib.loc="~/R/win-library/3.3")
 response <- comp_pre_rea[,1]
-predictor <- comp_pre_rea[,2]
+predictor <- as.matrix(data_pre)
 rocobj <- roc(response, predictor) # Very slow!
 
 fp_pack <- 1-rocobj$sensitivities
