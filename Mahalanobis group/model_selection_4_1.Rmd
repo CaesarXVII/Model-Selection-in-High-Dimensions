@@ -1,0 +1,380 @@
+---
+title: "Correlation, Efron's q-class and ROC Curves"
+author: "Cecilia Galvan and Nensi Kopellaj"
+date: "09 03 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tictoc)
+library(pROC)
+library(MASS)
+```
+
+# Simulations in a Correlated Environment
+
+## (a) and (b)
+```{r a}
+n <- 1000
+p <- 5
+mu <- rep(0, length = p)
+sigma <- matrix(nrow = 5,ncol = 5)
+rho <- c(0.2,0.5,0.7)
+i <- 3
+for (l in 1:5){
+  for (m in 1:5){
+    sigma[l,m] <- rho[i]^abs(l-m)
+  }
+}
+
+X <- mvrnorm(n, mu, sigma)
+```
+
+### Simulations and CV
+#### Exercise 1
+```{r}
+## (b)
+beta = c(3,1.5,0,2,0)
+
+s_n_ratio = mean(X%*%beta)/sqrt(sigma) # same result taking the mean out of X directly
+
+## (c)
+
+y_hat = X%*%beta + rnorm(n,0,1)
+
+## (d)
+
+data <- data.frame(cbind(y_hat,X))
+colnames(data) = c("y","x1","x2","x3","x4","x5")
+
+ind = 1:1000
+index = sample(x = ind,size = 500,replace = F)
+
+train_set <- data[index,]
+
+test_set <- data[-index,]
+
+cv_error = rep(0,31)
+aic_values = rep(0,31)
+
+
+# One regressor only models
+for(i in 1:5) {
+  m_1 = lm(train_set$y ~ train_set[,i+1], data = train_set)
+  cv_error[i] = mean((test_set$y - (cbind(rep(1,500),test_set[,i+1])%*% m_1$coefficients))^2)
+  aic_values[i] = -2*logLik(m_1) + 2*3
+}
+
+
+# Two regressors models
+x = c(1,2,3,4,5)
+M = combn(x,2)
+for(i in 1:10) {
+  m_2 = lm(train_set$y ~ train_set[,M[1,i]+1] + train_set[,M[2,i]+1], data = train_set)
+  cv_error[i+5] = mean((test_set$y - cbind(rep(1,500),test_set[,M[1,i]+1], test_set[, M[2,i] +1])%*%m_2$coefficients)^2)
+  aic_values[i+5] = -2*logLik(m_2) + 2*4
+}
+
+
+# Three regressors models
+M = combn(x,3)
+for(i in 1:10) {
+  m_3 = lm(train_set$y ~ train_set[,M[1,i]+1] + train_set[,M[2,i]+1] + train_set[,M[3,i]+1], data = train_set)
+  cv_error[i+ 15] = mean((test_set$y - cbind(rep(1,500),test_set[,M[1,i]+1], test_set[, M[2,i] +1],test_set[, M[3,i]+1])%*%m_3$coefficients)^2)
+  aic_values[i+15] = -2*logLik(m_3) + 2*5
+}
+
+
+# Four regressors models
+M = combn(x,4)
+for(i in 1:5) {
+  m_4 = lm(train_set$y ~ train_set[,M[1,i]+1] + train_set[,M[2,i]+1] + train_set[,M[3,i]+1] + train_set[,M[4,i]+1], data = train_set)
+  cv_error[i+25] = mean((test_set$y - cbind(rep(1,500),test_set[,M[1,i]+1], test_set[, M[2,i] +1],test_set[, M[3,i]+1],test_set[, M[3,i]+1])%*% m_4$coefficients)^2)
+  aic_values[i+25] = -2*logLik(m_4) + 2*6
+}
+
+help("logLik")
+
+# Full model 
+full_model = lm(train_set$y ~ ., data = train_set)
+full_model$coefficients
+
+cv_error_full = mean((test_set$y - cbind(rep(1,500), test_set$x1,test_set$x2,test_set$x3,test_set$x4,test_set$x5)%*% full_model$coefficients)^2)
+
+cv_error[31] = cv_error_full
+
+aic_values[31] = -2*logLik(full_model) + 2*7
+
+which.min(cv_error)
+
+# correct model
+correct_model = lm(train_set$y ~ train_set$x1 + train_set$x2 + train_set$x4, data = train_set)
+cv_error_cor = mean((test_set$y - cbind(rep(1,500), test_set$x1,test_set$x2,test_set$x4)%*% correct_model$coefficients)^2)
+cv_error_cor
+```
+
+With correlation, CV procedure suggests that model 28, with 4 regressors, fits the data the best for alpha=0.2 and for alpha=0.5. Even if this chosen model is not the true one, its CV error is very similar to the one of the true model.
+For a high correlation, alpha=0.7, model 17 is found the be the best one.
+
+```{r}
+## (e)
+# If p=100 --> 2^100 - 1 is roughly 1.267*10^30 possible models
+tic()
+
+full_model = lm(train_set$y ~ ., data = train_set)
+
+cv_error_full = mean((test_set$y - cbind(rep(1,500), test_set$x1,test_set$x2,test_set$x3,test_set$x4,test_set$x5)%*% full_model$coefficients)^2)
+
+Sys.sleep(1)
+toc()
+
+# 4.357 sec * 10^30 => Almost 14 years!!!
+
+```
+
+Having correlation in the data makes this procedure impossible to compute.
+
+#### Exercise 2
+
+```{r}
+## (a),(b),(c)
+logLik(full_model)
+
+AIC(full_model) # number of parameters which are 6 (5+1 intercept) and sigma. It is the dim(paramterspace) 
+
+-2*logLik(full_model) + 2*7
+
+which.min(aic_values)
+
+AIC(correct_model)
+```
+
+AIC suggests correctly that model 17 is the best one. AIC performs better even in presence of correlated data.
+
+Again, with p=100, this task is impossible to compute!
+
+```{r}
+## (d)
+ind = 1:1000
+pos_CV = rep(0,100)
+pos_AIC = rep(0,100)
+
+for(z in 1:100) {
+  y_hat = X%*%beta + rnorm(n,0,1)
+  data = data.frame(cbind(y_hat,X))
+  colnames(data) = c("y","x1","x2","x3","x4","x5")
+  index = sample(x = ind,size = 500,replace = F)
+  train_set = data[index,]
+  test_set = data[-index,]
+  cv_error = rep(0,31)
+  aic_values = rep(0,31)
+  
+  # One regressor only models
+  for(i in 1:5) {
+    m_1 = lm(train_set$y ~ train_set[,i+1], data = train_set)
+    cv_error[i] = mean((test_set$y - (cbind(rep(1,500),test_set[,i+1])%*%m_1$coefficients))^2)
+    aic_values[i] = -2*logLik(m_1) + 2*3
+    }
+  
+  # Two regressors models
+  x = c(1,2,3,4,5)
+  M = combn(x,2)
+  for(i in 1:10) {
+    m_2 = lm(train_set$y ~ train_set[,M[1,i]+1] + train_set[,M[2,i]+1], data = train_set)
+    cv_error[i+5] = mean((test_set$y - cbind(rep(1,500),test_set[,M[1,i]+1], test_set[, M[2,i] +1])%*%m_2$coefficients)^2)
+    aic_values[i+5] = -2*logLik(m_2) + 2*4
+    }
+  # Three regressors models
+  M = combn(x,3)
+  for(i in 1:10) {
+    m_3 = lm(train_set$y ~ train_set[,M[1,i]+1] + train_set[,M[2,i]+1] + train_set[,M[3,i]+1], data = train_set)
+    cv_error[i+ 15] = mean((test_set$y - cbind(rep(1,500),test_set[,M[1,i]+1], test_set[, M[2,i] +1],test_set[, M[3,i]+1])%*%m_3$coefficients)^2)
+    aic_values[i+15] = -2*logLik(m_3) + 2*5
+    }
+  
+  # Four regressors models
+  M = combn(x,4)
+  for(i in 1:5) {
+    m_4 = lm(train_set$y ~ train_set[,M[1,i]+1] + train_set[,M[2,i]+1] + train_set[,M[3,i]+1] + train_set[,M[4,i]+1], data = train_set)
+    cv_error[i+25] = mean((test_set$y - cbind(rep(1,500),test_set[,M[1,i]+1], test_set[, M[2,i] +1],test_set[, M[3,i]+1],test_set[, M[3,i]+1])%*% m_4$coefficients)^2)
+    aic_values[i+25] = -2*logLik(m_4) + 2*6
+    }
+  # Full model
+  full_model = lm(train_set$y ~ ., data = train_set)
+  full_model$coefficients
+  cv_error_full = mean((test_set$y - cbind(rep(1,500), test_set$x1,test_set$x2,test_set$x3,test_set$x4,test_set$x5)%*% full_model$coefficients)^2)
+  cv_error[31] = cv_error_full
+  
+  aic_values[31] = -2*logLik(full_model) + 2*7
+  
+  pos_CV[z] = which.min(cv_error)
+  
+  pos_AIC[z] = which.min(aic_values)
+
+}
+
+# We know that the right position is 17, from 25-30 are difficult model expecially number 28 and 26
+
+pos_CV
+
+pos_AIC
+```
+
+
+##### Exact model proportion
+```{r, eval=FALSE}
+sum(pos_CV == "17")/100
+```
+
+alpha=0.2 --> 0.45
+
+alpha=0.5 --> 0.47
+
+alpha=0.9 --> 0.45
+
+
+``` {r, eval=FALSE}
+sum(pos_AIC == "17")/100
+```
+
+alpha=0.2 --> 0.71
+
+alpha=0.5 --> 0.64
+
+alpha=0.9 --> 0.69
+
+
+##### Correct model proportion (linked to the consistency of the model selection procedure)
+```{r, eval=FALSE}
+sum(pos_CV > 16)/100
+```
+
+alpha=0.2 --> 1
+
+alpha=0.5 --> 1
+
+alpha=0.9 --> 1
+
+```{r, eval=FALSE}
+sum(pos_AIC > 16)/100
+```
+
+alpha=0.2 --> 1
+
+alpha=0.5 --> 1
+
+alpha=0.9 --> 1
+
+##### Average number of regressors
+```{r}
+# CV case
+try = as.factor(pos_CV)
+levels(try)
+
+(3*sum(pos_CV=='17') + 
+    4*sum(pos_CV > 25 & pos_CV < 30) + 
+    5*sum(pos_CV=='31'))/100
+```
+
+alpha=0.2 --> 3.78
+
+alpha=0.5 --> 3.71
+
+alpha=0.9 --> 3.76
+
+```{r}
+# AIC case
+try = as.factor(pos_AIC)
+levels(try)
+
+(3*sum(pos_AIC=='17') + 
+   4*sum(pos_AIC > 25 & pos_AIC < 30) + 
+   5*sum(pos_AIC=='31'))/100
+
+```
+
+alpha=0.2 --> 3.3
+
+alpha=0.5 --> 3.39
+
+alpha=0.9 --> 3.37
+
+
+
+CV and AIC have similar results in terms of correct models and the average number of selected regressor. However, AIC has a better performance in terms of exact models.
+
+
+# ROC Curves
+## Question A
+
+```{r}
+load(file = "data_leukemia_reduced.Rda")
+leukemia <- data_leukemia_reduced
+str(leukemia)
+
+v <- data.frame(leukemia[,2:12])
+which.min(abs(cor(v)))
+aic =c(1:11)
+for(i in 1:11 ){
+  model_1 <-glm(y~v[,i],family = binomial(link="logit"),data = leukemia)
+  aic[i] = AIC(model_1)
+}
+v[which.min(aic)] # V957
+# Model with lowest AIC
+model_one_var <- glm(y~v[,4],family = binomial(link="logit"),data = leukemia)
+summary(model_one_var)
+# Model with least correlated regressors
+model_test_673 <-glm(y~v[,3],family = binomial(link="logit"),data = leukemia)
+summary(model_test_673)
+
+model_test_2482 <-glm(y~v[,9],family = binomial(link="logit"),data = leukemia)
+summary(model_test_2482)
+```
+
+ We decided to use the model with one regrssors which the lowest AIC value.
+ 
+## Question B
+```{r}
+c = 0.5
+prediction<-model_one_var$fitted.values
+prediction[which(prediction>c)] = 1 
+prediction[which(prediction<=c)] = 0
+prediction <-as.factor(prediction)
+table(leukemia$y)
+#
+
+#TPR
+tpr = length(intersect(which(prediction==1),which(leukemia$y==1)))/length(which(leukemia$y==1))
+# TNR 
+tnr = length(intersect(which(prediction==0),which(leukemia$y==0)))/length(which(leukemia$y==0))
+# FNR = 1- TPR
+fnr = length(intersect(which(prediction==0),which(leukemia$y==1)))/length(which(leukemia$y==1))
+# FPR = 1-TNR
+fpr = length(intersect(which(prediction==1),which(leukemia$y==0)))/length(which(leukemia$y==0))
+
+```
+ 
+ ## Question C
+```{r}
+c = seq(0,1,0.001)
+tpr = c(1:1001)
+fpr = c(1:1001)
+for(i in 1:1001){
+  prediction <-model_one_var$fitted.values
+  prediction[which(prediction>c[i])] = 1 
+  prediction[which(prediction<=c[i])] = 0
+  tpr[i] = length(intersect(which(prediction==1),which(leukemia$y==1)))/length(which(leukemia$y==1))
+  fpr[i] = length(intersect(which(prediction==1),which(leukemia$y==0)))/length(which(leukemia$y==0))
+ 
+}
+# ROC Curve
+plot(fpr,tpr,t = "l")
+
+```
+ 
+## Question D
+```{r}
+plot(roc(leukemia$y,model_one_var$fitted.values))
+```
+

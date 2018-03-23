@@ -1,0 +1,12 @@
+---
+title: "Practice 3"
+author: "Alexander Maslev, Hanxiong Wang, Minyoung Lee"
+date: "2018/ 3/ 5"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### EXERCISE 1 
