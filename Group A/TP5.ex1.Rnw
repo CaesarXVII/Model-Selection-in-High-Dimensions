@@ -1,0 +1,68 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage{geometry} % see geometry.pdf on how to lay out the page. There's lots.
+\usepackage{enumerate}
+\usepackage[super]{nth}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\geometry{a4paper} % or letter or a5paper or ... etc
+% \geometry{landscape} % rotated page geometry
+%%% BEGIN DOCUMENT
+\begin{document}
+\begin{center}
+\textbf{Practical 5}, Group A\\ 
+March, \nth{26}
+\end{center}
+\textbf{1. Theoretical part}
+\vspace{0.5cm}
+
+We want to prove that $(1) \Leftrightarrow (2)$, where
+\begin{enumerate}[(1)]
+\item $\min_{j \in P \setminus S}||y-X^*\hat{\beta^*} - x_j\beta_j||_2^2$
+\item $\max_{j \in P \setminus S}|x_j^T(y-X^*\hat{\beta^*})|$
+\end{enumerate}
+\vspace{0.5cm}
+\textbf{Proof}
+\\
+Define the residual as $e^* = y- X^*\hat{\beta^*}$. 
+\\
+Let us compute the First Order Condition for $$f(\beta_j) = ||y-X^*\hat{\beta^*} - x_j\beta_j||_2^2.$$
+Expanding the L2 norm, we get 
+\begin{align}
+f(\beta_j) = & ||y-X^*\hat{\beta^*} - x_j\beta_j||_2^2  \notag\\
+& = ||e^* - x_j\beta_j||_2^2  \notag\\ 
+& = (e^* - x_j\beta_j)^T(e^* - x_j\beta_j)  \notag\\
+& = {e^*}^Te^* - 2\beta_j^Tx_j^Te^* + \beta_j^Tx_j^Tx_j\beta_j  \notag\\
+& = {e^*}^Te^* - 2\beta_j^Tx_j^Te^* + \beta_j^T\beta_j  \notag,
+\end{align}
+since we assume all predictors unitary. Differentiating according to $\beta_j$ we get
+$$
+\frac{\partial f(\beta_j)}{\partial \beta_j} = -2x_j^Te^* + 2\beta_j = 0 \Leftrightarrow \hat{\beta_j} = x_j^Te^*.
+$$
+Therefore minimising $f(\beta_j) , \forall j$ is equivalent to
+\begin{align*} 
+& \min_{j \in P \setminus S} {e^*}^Te^* - 2\beta_j^T\beta_j + \beta_j^T\beta_j\\
+& \Leftrightarrow \min_{j \in P \setminus S} {e^*}^Te^* - 2||\beta_j||_2^2 + ||\beta_j||_2^2\\
+& \Leftrightarrow \min_{j \in P \setminus S} {e^*}^Te^* - ||\beta_j||_2^2\\
+& \Leftrightarrow \min_{j \in P \setminus S} - ||\beta_j||_2^2,
+\end{align*} 
+since $e^*$ is independent of $j$. Using some optimisation result, we obtain
+$$
+\min_{j \in P \setminus S} - ||\beta_j||_2^2  \Leftrightarrow \max_{j \in P \setminus S} ||\beta_j||_2^2.
+$$
+Since optimising over the L2 norm is equivalent to optimising over the L1 norm, we get the following optimisation problem 
+$$
+\max_{j \in P \setminus S} |\beta_j|.
+$$
+Using the FOC, First Optimality Condition, this results in
+$$
+\max_{j \in P \setminus S} |x_j^Te^*|.
+$$
+Using the definition of $e^*$, we find the optimisation problem (2):
+$$
+\max_{j \in P \setminus S} |x_j^T(y-X^*\hat{\beta^*})|,
+$$
+which completes the proof.
+\hfill\ensuremath{\square}
+
+\end{document}
