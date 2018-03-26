@@ -1,0 +1,97 @@
+---
+title: "practical_5_Final"
+author: "Alexander Maslev"
+date: "2018 M03 23"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+
+```{r warning=FALSE}
+#EX 2
+
+rm(list=ls())
+require(MASS)
+library(selectiveInference)
+library(tictoc)
+set.seed(11)
+
+#1
+# creating the 1000 x 10 matrix X
+mu=c(1,2,3,4,5,6,7,8,9,10)
+n=1000
+p=10
+sigma=diag(x=1,p,p)
+X=mvrnorm(n,mu,Sigma=sigma)
+
+#2
+# creating beta
+beta=c(3,1.5,0,2,rep(0,6))
+
+
+#3
+# creating epsilon and y
+eps=rnorm(n,mean=0,sd=1)
+y=X%*%beta+eps
+
+#a
+
+# implementing tictoc to measure time elapsed
+tic()
+
+# forward stepwise regression
+A=fs(X,y)
+
+# inference for forward stepwise regression
+B=fsInf(A)
+
+# model selection with forward stop rule
+C=forwardStop(B$pv,alpha=0.1) # 3 variables selected
+C=forwardStop(B$pv,alpha=0.37)
+toc()
+# changing alpha does not affect model selection unless alpha >0.36, then the number of 
+# variables selected begins to increase
+
+#b
+# performing model selection with AIC
+tic()
+A=fs(X,y)
+B_AIC=fsInf(A,type="aic")
+toc()
+B_AIC # 5 variables selected
+
+#BIC
+tic()
+A=fs(X,y)
+B_BIC=fsInf(A,type="aic",mult=log(n))
+toc()
+B_BIC # 3 variables selected
+
+
+#c
+# calculating number of total combinations for exhaustive search
+vec=rep(0,p)
+for (i in 1:p) {
+  vec[i]=choose(p,i)
+}
+combos=sum(vec)
+quickness=combos/55*1.05
+# exhaustive search has 1023 combinations 
+# we have 55 combinations for forward stepwise (10+9+8+....) which takes ~1.05 seconds
+# stepwise is ~20 times faster than exhaustive search
+#
+```
+
+
+
+```{r}
+
+```
+
+
