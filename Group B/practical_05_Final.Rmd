@@ -1,7 +1,7 @@
 ---
-title: "practical_5_Final"
-author: "Alexander Maslev"
-date: "2018 M03 23"
+title: "practical_5"
+author: "Alexander Maslev, Hanxiong Wang, Minyoung Lee"
+date: "2018 /03 / 23"
 output: pdf_document
 ---
 
@@ -9,89 +9,137 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## EXERCISE 2
+Simulations: Selection by Hypothesis Testing
 
+```{r warning=FALSE,echo=FALSE,results=FALSE}
 
-
-```{r warning=FALSE}
-#EX 2
-
-rm(list=ls())
 require(MASS)
 library(selectiveInference)
 library(tictoc)
 set.seed(11)
-
-#1
-# creating the 1000 x 10 matrix X
-mu=c(1,2,3,4,5,6,7,8,9,10)
-n=1000
-p=10
-sigma=diag(x=1,p,p)
-X=mvrnorm(n,mu,Sigma=sigma)
-
-#2
-# creating beta
-beta=c(3,1.5,0,2,rep(0,6))
-
-
-#3
-# creating epsilon and y
-eps=rnorm(n,mean=0,sd=1)
-y=X%*%beta+eps
-
-#a
-
-# implementing tictoc to measure time elapsed
-tic()
-
-# forward stepwise regression
-A=fs(X,y)
-
-# inference for forward stepwise regression
-B=fsInf(A)
-
-# model selection with forward stop rule
-C=forwardStop(B$pv,alpha=0.1) # 3 variables selected
-C=forwardStop(B$pv,alpha=0.37)
-toc()
-# changing alpha does not affect model selection unless alpha >0.36, then the number of 
-# variables selected begins to increase
-
-#b
-# performing model selection with AIC
-tic()
-A=fs(X,y)
-B_AIC=fsInf(A,type="aic")
-toc()
-B_AIC # 5 variables selected
-
-#BIC
-tic()
-A=fs(X,y)
-B_BIC=fsInf(A,type="aic",mult=log(n))
-toc()
-B_BIC # 3 variables selected
-
-
-#c
-# calculating number of total combinations for exhaustive search
-vec=rep(0,p)
-for (i in 1:p) {
-  vec[i]=choose(p,i)
-}
-combos=sum(vec)
-quickness=combos/55*1.05
-# exhaustive search has 1023 combinations 
-# we have 55 combinations for forward stepwise (10+9+8+....) which takes ~1.05 seconds
-# stepwise is ~20 times faster than exhaustive search
-#
 ```
 
+### Simulation settings
 
+### 1) Generate MVN
+we have created the matrix $X_{n*p}$ with n = 1000 and p = 10.
 
+```{r,echo=FALSE}
+
+p<-10
+n<-1000
+sigma<-diag(p)
+Mu<-rep(0,p) # location vector
+X<-mvrnorm(n , Mu, sigma)
+
+```
+
+### 2) Creating beta
+$\beta$ = [3 1.5 0 2 rep(0,6)]
+
+```{r,echo=FALSE}
+
+beta<-c(3,1.5,0,2,rep(0,6))
+
+```
+
+### 3) $\hat{y}$ = $X_{n*p}\beta + \epsilon$
+
+```{r,echo=FALSE}
+
+e<-rnorm(n, mean = 0, sd = 1)
+Y_hat<-X%*%beta+e
+
+```
+
+### SELEVTIVE INFERENCE
+We have done the stepwise regression and model selection with ForwardStop rule, AIC and BIC
+
+### a)Stepwise regression with forwardStop 
 ```{r}
 
+fsfit1<-fs(X,Y_hat)
+out1<-fsInf(fsfit1)
+forwardStop(out1$pv,alpha=0.05)
+
 ```
+We did forward stepwise regression by fs(), then inference for forward stepwise regression by fsInf() and we selected model based on forward stop rule.\
+
+We tried with 7 different values for type one error($\alpha$=[0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4])
+```{r}
+
+forwardStop(out1$pv,alpha=0.1)
+forwardStop(out1$pv,alpha=0.15)
+forwardStop(out1$pv,alpha=0.2)
+forwardStop(out1$pv,alpha=0.25)
+forwardStop(out1$pv,alpha=0.3)
+forwardStop(out1$pv,alpha=0.35)
+forwardStop(out1$pv,alpha=0.4)
+
+```
+Until $\alpha$=0.35, the model selection procedure stopped in 3rd step which includes variable 1, 4 and 2 in each step. But if we increase the type one error to 0.4 then we includes two more variables which are variable 10 and 9.
+
+### b) Stepwise regression with AIC and BIC
+```{r}
+fsfit2<-fs(X,Y_hat)
+out2<-fsInf(fsfit2,type="aic",mult = 2,alpha=0.05)
+out2
+
+
+fsfit3<-fs(X,Y_hat)
+out3<-fsInf(fsfit2,type="aic",mult = log(n),alpha=0.05)
+out3
+
+```
+We did the forward stepwise regression by fs(), then inference for forward stepwise regression by fsInf() and we selected model based on AIC and BIC.\
+First result is the model selection based on AIC. By this rule, the forward stepwise regression stops at 5th step with variable 1, 4, 2, 10 and 9 included. This is same as forwardstop rule with $\alpha$ = 0.4.
+Second result is the model selection based on BIC. By this rule, the forward stepwise regression stops at 3rd step same as forwardstop rule with $\alpha$ = 0.05. In this case, we includes variable 1, 4 and 2 in the model.
+
+### c)Time takes for model selection procedure 
+```{r,echo=FALSE}
+
+tic()
+fsfit1<-fs(X,Y_hat)
+out<-fsInf(fsfit1)
+forwardStop(out$pv,alpha=0.10)
+toc()
+
+tic()
+fsfit2<-fs(X,Y_hat)
+out2<-fsInf(fsfit2,type="aic",mult = 2,alpha=0.05)
+toc()
+
+tic()
+fsfit3<-fs(X,Y_hat)
+out3<-fsInf(fsfit2,type="aic",mult = log(n),alpha=0.05)
+toc()
+
+
+```
+Forward Stepwise model selection in our case has 55 combination of the models to check. And It takes approximately 2sec for this process. If we wanted to do the exhaustive search, we need 2^p-1 = 1023 models to check. Then it will probably takes 40sec to do the exhaustive search. With just 10 variables, It is 40 sec, but if we have high dimension, time for the model selection process will grow rapidly.
+
+## EXERCISE 2
+Real Data Application : Zambia data set
+
+```{r}
+load("malnutrion_zambia_cleaned.Rda")
+#str(data_zambia)
+
+Y_zambia<-data_zambia[,1]
+X_zambia<-as.matrix(data_zambia[,c(2:7,21,22,24)])
+
+
+fitzambia<-fs(X_zambia,Y_zambia)
+out_zambia<-fsInf(fitzambia)
+out_zambia
+forwardStop(out_zambia$pv,alpha=0.05)
+out_zambia_aic<-fsInf(fitzambia,type="aic",mult = 2,alpha=0.05)
+out_zambia_aic
+out_zambia_bic<-fsInf(fitzambia,type="aic",mult = log(n),alpha=0.05)
+out_zambia_bic
+```
+First output shows the result based on Forwardstop rule. The process stopped at 2nd step and variable 1 and 5 is included. Second output shows the result based on AIC rule. The process stopped at 9th step and variable 1, 5, 8, 7, 6, 3, 2, 9 and 4 is included in a sequence. Last output with BIC rule stopped at 5th step. Thus variable 1, 5, 8, 7 and 6 is included sequentially.
+
 
 
