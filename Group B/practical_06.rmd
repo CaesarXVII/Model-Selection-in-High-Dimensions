@@ -52,8 +52,8 @@ mod32=SIS(train_X,train_y,family="binomial",penalty = "lasso",tune="aic")
 mod33=SIS(train_X,train_y,family="binomial",penalty = "lasso",tune="cv")
 
 mod11$coef.est
-mod11$coef.est
-mod11$coef.est
+mod12$coef.est
+mod13$coef.est
 mod21$coef.est
 mod22$coef.est
 mod23$coef.est
