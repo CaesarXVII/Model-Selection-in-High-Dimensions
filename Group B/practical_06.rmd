@@ -66,25 +66,23 @@ Models 1 and 2 select identical covariates, while model 3 has an additional vari
 
 ```{r}
 pred11=predict(mod11,test_X,type="class")
-sum(pred11!=test_y)/36 #error rate
 pred12=predict(mod12,test_X,type="class")
-sum(pred12!=test_y)/36 #error rate
 pred13=predict(mod13,test_X,type="class")
-sum(pred13!=test_y)/36 #error rate
 
 pred21=predict(mod21,test_X,type="class")
-sum(pred21!=test_y)/36 #error rate
 pred22=predict(mod22,test_X,type="class")
-sum(pred22!=test_y)/36 #error rate
 pred23=predict(mod23,test_X,type="class")
-sum(pred23!=test_y)/36 #error rate
 
 pred31=predict(mod31,test_X,type="class")
-sum(pred31!=test_y)/36 #error rate
 pred32=predict(mod32,test_X,type="class")
-sum(pred32!=test_y)/36 #error rate
 pred33=predict(mod33,test_X,type="class")
-sum(pred33!=test_y)/36 #error rate
+
+pred<-matrix(c(sum(pred11!=test_y)/36,sum(pred12!=test_y)/36,sum(pred13!=test_y)/36,
+               sum(pred21!=test_y)/36,sum(pred22!=test_y)/36,sum(pred23!=test_y)/36,
+               sum(pred31!=test_y)/36,sum(pred32!=test_y)/36,sum(pred33!=test_y)/36),3,3)
+colnames(pred)<-c("SCAD","MCP","Lasso")
+rownames(pred)<-c("bic","aic","cv")
+pred
 ```
 All methods perform equally well in terms of prediction error. 
 
