@@ -40,16 +40,15 @@ test_y = y_leuk[-index]
 
 ### c)
 We create 3 models using 3 possible combinations of penalized methods and tuning constants; the selected covariates and their coefficients are shown below.
-```{r warning=FALSE}
+```{r warning=FALSE,results=FALSE}
 mod11=SIS(train_X,train_y,family="binomial",penalty = "SCAD",tune="bic")
 mod12=SIS(train_X,train_y,family="binomial",penalty = "SCAD",tune="aic")
 mod13=SIS(train_X,train_y,family="binomial",penalty = "SCAD",tune="cv")
 mod21=SIS(train_X,train_y,family="binomial",penalty = "MCP",tune="bic")
 mod22=SIS(train_X,train_y,family="binomial",penalty = "MCP",tune="aic")
 mod23=SIS(train_X,train_y,family="binomial",penalty = "MCP",tune="cv")
-mod31=SIS(train_X,train_y,family="binomial",penalty = "lasso",tune="bic")
-mod32=SIS(train_X,train_y,family="binomial",penalty = "lasso",tune="aic")
-mod33=SIS(train_X,train_y,family="binomial",penalty = "lasso",tune="cv")
+mod31=SIS(train_X,train_y,family="binomial",penalty = "lasso")
+
 
 mod11$coef.est
 mod12$coef.est
@@ -58,33 +57,31 @@ mod21$coef.est
 mod22$coef.est
 mod23$coef.est
 mod31$coef.est
-mod32$coef.est
-mod33$coef.est
+
 
 ```
-Models 1 and 2 select identical covariates, while model 3 has an additional variable. We use the models to get the predictions and test the error rate of each model.
+Depend on the penalized methods and tuning constants, there are different covariates in the model. "SAD" with cv includes more predictors than other tuning constants. "MCP" with aic includes more predictors than other tuning constants. "lasso" includes much more variables than other penalized methods.
 
 ```{r}
 pred11=predict(mod11,test_X,type="class")
+sum(pred11!=test_y)/36 # SAD bic (X3, X5, X6) 
 pred12=predict(mod12,test_X,type="class")
+sum(pred12!=test_y)/36 # SAD aic (X3, X5, X6)
 pred13=predict(mod13,test_X,type="class")
+sum(pred13!=test_y)/36 # SAD cv (X4, X5, X6, X7, X9)
 
 pred21=predict(mod21,test_X,type="class")
+sum(pred21!=test_y)/36 # MCP bic (X4)
 pred22=predict(mod22,test_X,type="class")
+sum(pred22!=test_y)/36 # MCP aic (X5, X7, X10)
 pred23=predict(mod23,test_X,type="class")
+sum(pred23!=test_y)/36 # MCP cv (X4)
 
 pred31=predict(mod31,test_X,type="class")
-pred32=predict(mod32,test_X,type="class")
-pred33=predict(mod33,test_X,type="class")
+sum(pred31!=test_y)/36 # lasso (X1, X3, X4, X5, X6, X8, X9, X10)
 
-pred<-matrix(c(sum(pred11!=test_y)/36,sum(pred12!=test_y)/36,sum(pred13!=test_y)/36,
-               sum(pred21!=test_y)/36,sum(pred22!=test_y)/36,sum(pred23!=test_y)/36,
-               sum(pred31!=test_y)/36,sum(pred32!=test_y)/36,sum(pred33!=test_y)/36),3,3)
-colnames(pred)<-c("SCAD","MCP","Lasso")
-rownames(pred)<-c("bic","aic","cv")
-pred
 ```
-All methods perform equally well in terms of prediction error. 
+"SAD" with bic and aic, "lasso" predict perfectly with out of sample data. "SAD" with cv and "MCP" with aic predicts very good. "MCP" with bic and cv predicts good enough. For the leukemia data, "SAD" with bic and aic, "lasso" penalized method and tuning constants performs best cause they have zero prediction error.
 
 ## EXERCISE 2
 ### PC Simple Algorithm
@@ -181,8 +178,7 @@ We implement the algorithm that will find variables that we choose and the "m" w
 
 ## EXERCISE 3
 ### Classification Tree
-We need to ge the library and load the data here is the way we lode the data.
-To use the function tree grow we inport the library "repart"
+We use "rpart" to build a classification tree. 
 ```{r, warning=FALSE,echo=FALSE,results=FALSE}
 
 library("rpart", lib.loc="C:/Program Files/R/R-3.4.4/library")
