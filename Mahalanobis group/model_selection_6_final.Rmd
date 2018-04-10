@@ -1,0 +1,272 @@
+---
+title: "Streamwise Regression and CART"
+author: "Nensi Kopellaj & Cecilia Galvan"
+date: "09 04 2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(SIS)
+library(MASS)
+library(rpart)
+library(rpart.plot)
+library(tree)
+```
+
+# 1 Sure Independence Screening
+
+## (a)
+
+```{r, warning=FALSE}
+leukemia_big <- read.csv("http://web.stanford.edu/~hastie/CASI_files/DATA/leukemia_big.csv")
+leukemia_mat <- t(as.matrix(leukemia_big))
+# 20 ALL, 14 AML, 27 ALL, 11 AML
+y = c(rep(1,20),rep(0,14), rep(1,27), rep(0,11))
+X = leukemia_mat
+```
+
+
+## (b)
+
+```{r, warning=FALSE}
+set.seed(11)
+index <- sample(1:nrow(leukemia_mat))
+y.test <- y[index[1:36]]
+X.test <- X[index[1:36],]
+y.train <- y[-index[1:36]]
+X.train <- X[-index[1:36],]
+```
+
+
+## (c)
+
+```{r, warning=FALSE}
+reg1 <- SIS(x = X.train, y = y.train, family = 'binomial', tune='cv')
+reg11 <- SIS(x = X.train, y = y.train, family = 'binomial', tune='aic')
+reg111 <- SIS(x = X.train, y = y.train, family = 'binomial', tune='bic')
+
+reg2 <- SIS(x = X.train, y = y.train, family = 'binomial', penalty = 'MCP', tune='cv')
+reg22 <- SIS(x = X.train, y = y.train, family = 'binomial', penalty = 'MCP', tune='aic')
+reg222 <- SIS(x = X.train, y = y.train, family = 'binomial', penalty = 'MCP', tune='bic')
+
+reg3 <- SIS(x = X.train, y = y.train, family = 'binomial', penalty = 'lasso', tune='cv')
+reg33 <- SIS(x = X.train, y = y.train, family = 'binomial', penalty = 'lasso', tune='aic')
+reg333 <- SIS(x = X.train, y = y.train, family = 'binomial', penalty = 'lasso', tune='bic')
+
+pred1 <- predict(reg1, newx = X.test, type = 'response')>0.5
+pred11 <- predict(reg11, newx = X.test, type = 'response')>0.5
+pred111 <- predict(reg111, newx = X.test, type = 'response')>0.5
+
+pred2 <- predict(reg2, newx = X.test, type = 'response')>0.5
+pred22 <- predict(reg22, newx = X.test, type = 'response')>0.5
+pred222 <- predict(reg222, newx = X.test, type = 'response')>0.5
+
+pred3 <- predict(reg3, newx = X.test, type = 'response')>0.5
+pred33 <- predict(reg33, newx = X.test, type = 'response')>0.5
+pred333 <- predict(reg333, newx = X.test, type = 'response')>0.5
+```
+
+```{r, warning=FALSE}
+which((pred1==y.test)==FALSE)
+which((pred11==y.test)==FALSE)
+which((pred111==y.test)==FALSE)
+which((pred2==y.test)==FALSE)
+which((pred22==y.test)==FALSE)
+which((pred222==y.test)==FALSE)
+which((pred3==y.test)==FALSE)
+which((pred33==y.test)==FALSE)
+which((pred333==y.test)==FALSE)
+```
+
+SCAD and MCP penalization have the same results with aic and bic.
+
+SIS using cv for the tunning constant is less precise (with the *set.seed(11)*), in the sense that it provided more misclassified points.
+
+Lasso penalization has a poorer performance than SCAD and MCP (more misclassified points).
+
+
+
+# 2 PC Algorithm
+```{r}
+set.seed(11)
+n <- 1000
+p <- 10
+ro <- 0.5
+sigma <- matrix(nrow = p,ncol = p)
+for (l in 1:p){
+  for (m in 1:p){
+    sigma[l,m] <- ro^abs(l-m)
+  }
+}
+beta <- c(3,1.5,0,2,rep(0,6))
+mu <- rep(0, length = p)
+X <- mvrnorm(n = n,Sigma = sigma,mu = mu)
+noise <- mvrnorm(n = n,mu = 0,Sigma = 1)
+y_hat <- X%*%beta + noise
+```
+
+## (a)
+
+```{r}
+correlation <- c(rep(0,10))
+M1 <- 0
+Z_Fisher <-0
+test <-0
+alpha <- 0.05
+for (i in 1 : p) {
+  correlation <- cor(X,y_hat)
+  Z_Fisher[i] <-0.5*log(1+correlation[i]/(1-correlation[i]))
+  test[i] <-sqrt(n - 10 - 3)* abs(Z_Fisher[i])>qnorm(1-(alpha/2))
+  M1 <- test
+}
+M1
+which.max(correlation)
+```
+
+The first variable to enter in our model is X1
+
+## (b) Calculate the partial correlation of order 1 of the Active Set M1
+
+```{r}
+Z_Fisher1 <-0
+partial_corr1 <- 0
+test <- c(2:10)
+var <- c(2:10)
+alpha <- 0.05
+for (j in 2:10){
+  Xk <- X[,1] 
+  Xj <- X[,j]
+  H <- Xk%*%solve(t(Xk)%*%Xk)%*%t(Xk)
+  I <- diag(n)
+  error <-(I - H)%*%y_hat
+  j <- j-1
+  partial_corr1[j] <-t(error)%*%(I - H)%*%Xj/sqrt((t(error)%*%error)%*%(t(Xj)%*%(I-H)%*%Xj))
+  Z_Fisher1[j] <-0.5*log((1+partial_corr1[j])/(1-partial_corr1[j]))
+  test[j] <-sqrt(n - 8 - 3)* abs(Z_Fisher1[j])>qnorm(1-(alpha/2))
+  M2 <- test
+}
+M2
+var[which.max(partial_corr1)]
+```
+
+M2 is: X1 and X4
+
+## (c)
+
+```{r}
+Z_Fisher2<-0
+partial_corr2 <- 0
+C <- c(2,3,5:10)
+test <- rep(0,8)
+for (i in 1:8){
+  k <- C[i]
+  j <-c(1,4)
+  Xj <- X[,k]
+  Xk <- X[,j]
+  H <- Xk%*%solve(t(Xk)%*%Xk)%*%t(Xk)
+  I <- diag(n)
+  diff <- I-H
+  error <-diff%*%y_hat
+  partial_corr2[i] <-t(error)%*%diff%*%Xj/(sqrt(t(error)%*%error%*%(t(Xj)%*%diff%*%Xj)))
+  Z_Fisher2[i] <-0.5*log((1+partial_corr2[i])/(1-partial_corr2[i]))
+  test[i] <-sqrt(n - 7 - 3)* abs(Z_Fisher2[i])>qnorm(1-(alpha/2))
+  M3 <- test
+}
+M3
+var[which.max(partial_corr2)]
+```
+
+M3 is: X1, X4, X2
+
+```{r}
+Z_Fisher3<-0
+partial_corr3 <- 0
+C <- c(3,5:10)
+test <- rep(0,7)
+for (i in 1:7){
+  k <- C[i]
+  j <-c(1,2,4)
+  Xj <- X[,k]
+  Xk <- X[,j]
+  H <- Xk%*%solve(t(Xk)%*%Xk)%*%t(Xk)
+  I <- diag(n)
+  diff <- I-H
+  error <-diff%*%y_hat
+  partial_corr3[i] <-t(error)%*%diff%*%Xj/(sqrt(t(error)%*%error%*%(t(Xj)%*%diff%*%Xj)))
+  Z_Fisher3[i] <-0.5*log((1+partial_corr3[i])/(1-partial_corr3[i]))
+  test[i] <-sqrt(n - 6 - 3)* abs(Z_Fisher3[i])>qnorm(1-(alpha/2))
+  M4 <- test
+}
+M4
+```
+
+M4 = M3 => convergence
+
+The model contains the following variables: X1, X4 and X2. This is the exact model.
+
+
+
+# 3 Classification and Regression Tree
+
+## Iris dataset
+
+### (a)
+
+```{r, warning=FALSE}
+data <- iris
+index <- sample(nrow(data))
+data.test <- data[index[1:50],]
+data.train <- data[-index[1:50],]
+```
+
+
+### (b)
+
+```{r, warning=FALSE}
+reg <- rpart(Species ~ ., data = data.train, method = 'class')
+rpart.plot(reg, type = 0)
+```
+
+
+### (c)
+
+```{r, warning=FALSE}
+reg.p <- prune.rpart(reg, cp= 0.05)
+pred <- predict(reg.p, newx = data.test[,-5], type = 'class')
+which(data.test[,5]==pred)
+length(which(data.test[,5]==pred))
+```
+
+
+## Zambia dataset
+
+### (a)
+
+```{r, warning=FALSE}
+load("malnutrion_zambia_cleaned.Rda")
+index <- sample(nrow(data_zambia))
+data.test <- data_zambia[index[1:642],]
+data.train <- data_zambia[-index[1:642],]
+x.test <- data.test[,-1]
+```
+
+
+### (b)
+
+```{r, warning=FALSE}
+regr <- rpart(`Height for age sd` ~ ., data = data.train)
+rpart.plot(regr, type = 1)
+```
+
+
+### (c)
+
+```{r, warning=FALSE}
+regr.p <- prune.rpart(regr, cp= 0.05)
+predd <- predict(regr.p, newdata = x.test)
+which(abs(data.test[,1]-predd)<0.5)
+length(which(abs(data.test[,1]-predd)<0.5))
+```
