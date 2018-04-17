@@ -1,0 +1,148 @@
+---
+title: "Shrinkage Methods"
+author: "Nensi Kopellaj & Cecilia Galvan"
+date: "17 04 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(glmnet)
+```
+
+```{r}
+load("malnutrion_zambia_cleaned.Rda")
+```
+
+# 1 Ridge Regression
+
+## (a)
+
+```{r, warning=FALSE}
+x <- model.matrix(`Height for age sd`~.,data = data_zambia)
+y <- data_zambia[,1]
+set.seed(11)
+index <- sample(nrow(data_zambia), size = 642)
+x.test <- x[index,]
+x.train <- x[-index,]
+y.test <- y[index]
+y.train <- y[-index]
+
+zambia.glmnetfit <- glmnet(x.train, y.train, family = 'gaussian', 
+                           alpha = 0, standardize = TRUE)
+plot(zambia.glmnetfit,xvar="lambda",label=TRUE)
+```
+
+
+Predictor X6 highly improtant!
+
+The higher the lambda, the higher is the penalization on the coefficients (they are shrunken to 0).
+
+
+## (b)
+
+```{r, warning=FALSE}
+zambia.glmnetcv <- cv.glmnet(x.train,y.train, nfolds = 10, 
+                             alpha = 0, family = 'gaussian')
+plot(zambia.glmnetcv)
+zambia.glmnetcv$lambda.min
+zambia.glmnetcv$lambda.1se
+```
+
+
+For high lambdas, the MSE increases.
+
+zambia.glmnetcv$lambda.min: gives minimum mean cross-validated error
+
+zambia.glmnetcv$lambda.1se: gives the most regularized model such that error is within one standard error of the minimum
+
+
+## (c)
+
+Lambda.min
+```{r, warning=FALSE}
+zambia.pred <- predict(zambia.glmnetfit, newx = x.test, type = "response",
+                       s = zambia.glmnetcv$lambda.min)
+
+sum((zambia.pred-y.test)^2)
+```
+
+Lambda.1se
+```{r, warning=FALSE}
+zambia.pred2 <- predict(zambia.glmnetfit, newx = x.test, type = "response",
+                       s = zambia.glmnetcv$lambda.1se)
+
+sum((zambia.pred2-y.test)^2)
+```
+
+Linear regression
+```{r, warning=FALSE}
+data_zambia2 <- data_zambia[-index,]
+x.test <- data.frame(x.test)
+names(x.test) <- c("Intercept",names(data_zambia)[2:ncol(data_zambia)])
+zambia.lm <- lm(`Height for age sd`~.,data = data_zambia2)
+zambia.lm.pred <- predict(zambia.lm, newdata = x.test, type = "response")
+sum((zambia.lm.pred-y.test)^2)
+```
+
+
+Here, the simple linear regression is as good as using ridge.
+
+
+
+# 2 Lasso
+
+## (1)
+
+```{r, warning=FALSE}
+zambia.lasso <- glmnet(x.train, y.train,alpha = 1,family = "gaussian")
+plot(zambia.lasso,xvar="lambda",label=TRUE)
+```
+
+
+Same comments as exercise 1, point (a)
+
+
+## (2)
+
+```{r, warning=FALSE}
+zambia.cv <- cv.glmnet(x.train,y.train,nfolds = 10, alpha = 1, family = "gaussian")
+plot(zambia.cv)
+```
+
+
+Same comments as exercise 1, point (b)
+
+
+## (3)
+
+Lambda.min
+```{r, warning=FALSE}
+x.test <- x[index,]
+lasso.pred <- predict(zambia.lasso, newx = x.test, type = "response",
+                     s = zambia.cv$lambda.min)
+sum((lasso.pred-y.test)^2)
+```
+
+Lambda.1se
+```{r, warning=FALSE}
+lasso.pred2 <- predict(zambia.lasso, newx = x.test, type = "response",
+                      s = zambia.cv$lambda.1se)
+sum((lasso.pred2-y.test)^2)
+```
+
+Linear regression
+```{r, warning=FALSE}
+coef.lasso <- (which(coef(zambia.cv,s = "lambda.min")!=0)-2)[-1]
+data_zambia3 <- data.frame(cbind(x.train[,coef.lasso],y.train))
+lasso.lm <- lm(y.train ~ ., data = data_zambia3)
+lasso.lm.pred <- predict(lasso.lm, newdata = data.frame(x.test), type = 'response')
+sum((lasso.lm.pred-y.test)^2)
+```
+
+
+Here, performing a linear regression over the chosen predictors of lasso (= relaxed lasso) does not improve our prediction.
+
+
+
+
