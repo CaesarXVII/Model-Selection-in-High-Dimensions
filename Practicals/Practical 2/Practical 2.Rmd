@@ -4,16 +4,17 @@ author: "Kieran Schubert"
 date: "3/2/2019"
 output: 
   html_document:
-      number_sections: yes
+      #number_sections: yes
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Introduction to R Markdown
+## EX1) Introduction to R Markdown
 
 ### b) No output and histogram of iris sepal.width with figure width/height
+
 
 ```{r iris, echo=FALSE, fig.show = 'hide'}
 hist(iris$Sepal.Width)
@@ -25,11 +26,14 @@ hist(iris$Sepal.Width)
 ```
 
 ### c) Conditional probability
-
+$P(Iris.Virginica|Sepal.width > 3) = P(Sepal.width > 3|Iris.Virginica)*P(Iris.Virginica)$
 $$P(Iris.Virginica|Sepal.width > 3) = P(Sepal.width > 3|Iris.Virginica)*P(Iris.Virginica)$$
 ```{r condproba, echo=TRUE}
 prior <- sum(iris$Species == 'virginica') / dim(iris)[1]
 cond.proba <- sum(iris[iris$Species == 'virginica',]$Sepal.Width > 3) / sum(iris$Species == 'virginica')
-posterior <- cond.proba * prior
+posterior <- (cond.proba * prior)
 posterior
 ```
+
+## EX3) Zambia Malnutrition dataset
+

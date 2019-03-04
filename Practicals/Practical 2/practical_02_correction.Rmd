@@ -65,6 +65,9 @@ $P(\; virginica / \; sepal.width > 3) = \frac{P(virginica \; \& \; sepal.width >
 	P(\; virginica / \; sepal.width > 3) = \frac{P(virginica \; \& \; sepal.width > 3)}{P(sepal.width > 3)} = 0.254
 \end{equation*}
 
+\begin{align*}
+  
+
 #### Evaluation of the formula
 
 ```{r}
