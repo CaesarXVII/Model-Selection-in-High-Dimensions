@@ -46,3 +46,9 @@ Network Trash Folder
 Temporary Items
 .apdisk
 .Rproj.user
+
+
+# ignore files of homeworks
+# lionel voirol
+lionel_voirol/HW2/MSHD_practical_2_lionel_voirol.Rmd
+lionel_voirol/HW2/MSHD_practical_2_lionel_voirol.html
