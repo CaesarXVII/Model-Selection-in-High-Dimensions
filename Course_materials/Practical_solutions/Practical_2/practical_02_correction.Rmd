@@ -1,0 +1,363 @@
+---
+title: "Exhaustive Search - CV and AIC"
+author: "Cesare Miglioli"
+date: "10 March 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1) Simulations and CV
+
+```{r include=FALSE,echo=FALSE,message = FALSE}
+library(MASS)
+library(mvtnorm)
+```
+
+### a) Generate from a MVN (multivariate normal) a matrix $\mathbf{X_{n*p}}$ with $n = 1000$ and $p = 5$. You can choose the location vector as you wish but set the scale matrix as the identity.
+
+```{r}
+
+n <- 1000
+
+p <- 5
+
+rho <- 0
+
+mu <- rep(1,p)
+
+sigma <- rep(0,p^2)
+
+sigma <- matrix(data = sigma, ncol = p,nrow = p)
+
+# Autoregressive structure
+
+for (i in 1:p) {
+  
+  for (j in 1:p) {
+    
+    
+    sigma[i,j] <- rho^(abs(i-j))
+    
+    
+  }
+  
+  
+}
+
+set.seed(123)
+
+X <- mvrnorm(n,mu,sigma)
+
+```
+
+### b) Choose the generating vector $\boldsymbol{\beta }= [3 \; 1.5 \; 0 \; 2 \; 0]$ and retrieve the signal to noise ratio of this setting.
+
+There are several definitions of the signal to noise ratio (SNR) usually context-dependent but for this practical we will focus on two of them. In physics, the SNR can be defined as the reciprocal of the coefficient of variation, i.e., the ratio of mean to standard deviation of a signal or measurement: $SNR_{1} = \frac{\mu}{\sigma}$ where $\mu$ is the signal mean or expected value and $\sigma$ is the standard deviation of the noise. In statistics usually, given a model $y = f(X) + \epsilon$, we define the SNR as the ratio between the variance of the data and the variance of the noise: $SNR_{2} = \frac{Var(f(X))}{Var(\epsilon)}$. In the context of our simulation study then we have that: $SNR_{1} = \frac{E[x^{T}\beta]}{\sqrt{Var(\epsilon)}} = \mu^{T}\beta$ while $SNR_{2} = \frac{Var(x^{T}\beta)}{Var(\epsilon)} =  \beta^{T}\beta$. It is clear that, in our setting, the second definition is the more appropriate one as, for example, we could have a negative SNR depending on the values of the location vector and the beta coefficients.   
+
+```{r}
+
+beta <- c(3,1.5,0,2,0)
+
+# Signal to noise ratio: 
+
+# first definition
+
+s_n_r_1 <- t(mu)%*%beta 
+
+# second definition (preferred) 
+
+s_n_r_2 <- beta%*%beta
+  
+#Note well: sigma in our case is set to one (see point c)  
+
+```
+
+
+### c) Generate the responses thanks to the relation $\mathbf{y} =  \mathbf{X_{n*p}} \; \boldsymbol{\beta} + \boldsymbol{\epsilon}$ where $\epsilon_{i}$ is a standard normal. Suppose for simplicity that the errors are uncorrelated.
+
+```{r}
+
+eps <- rnorm(n,0,1)
+
+y <- X%*%beta + eps
+
+```
+
+### d)  Split the data randomly in two halves (k=2) and use one half as a training set to determine $\boldsymbol{\hat{\beta}_{MLE}}$. Then, making use of the specific loss function of the linear regression, find the test set cross validation error for each possible model with the other half. Repeat the procedure switching training and test set. Conclude on the best model by averaging the cross validation errors in the two data halves for each possible model.
+
+In our case since $p=5$, we have $2^p - 1 = 31$ possible models to check. 
+
+```{r}
+
+set.seed(123)
+
+index <- sample(1:n, size=0.5*n,replace = F)
+
+# Split data
+y_train<- y[-index,]
+x_train<- X[-index,]
+y_test<- y[index,]
+x_test<-X[index,]
+
+# Create a list with all the possible models 
+
+v <- c(1,2,3,4,5) #variable index
+
+res <- do.call("c", lapply(seq_along(v), function(i) combn(v, i, FUN = list)))
+
+cv_err <- matrix(data = rep(0,2*length(res)),nrow = length(res),ncol = 2)
+
+for (i in 1:length(res)) {
+  
+  df_train <- data.frame(y_train,x_train[,res[[i]]])
+  
+  df_test <- data.frame(y_test,x_test[,res[[i]]])
+  
+  m_train <- lm(df_train$y_train ~ .-1, data = df_train)
+  
+  m_test <- lm(df_test$y_test ~ .-1, data = df_test)
+  
+  cv_err[i,1] <- t(y_test - as.matrix(x_test[,res[[i]]])%*%as.vector(m_train$coefficients))%*%
+    (y_test - as.matrix(x_test[,res[[i]]])%*%as.vector(m_train$coefficients))
+    
+  cv_err[i,2] <- t(y_train - as.matrix(x_train[,res[[i]]])%*%as.vector(m_test$coefficients))%*%
+    (y_train - as.matrix(x_train[,res[[i]]])%*%as.vector(m_test$coefficients))
+  
+}
+
+best_mod_cv <- res[[which.min(rowMeans(cv_err))]] 
+
+best_mod_cv
+
+```
+
+### e) Suppose now that we increase the size of $\boldsymbol{\beta }$ to 100 (i.e. $p = 100$ ). Calculate the number of possible models together with an estimate of the time needed for an exhaustive search (\textit{hint: use previous results}). Conclude on the feasibility of the task.  
+
+If $p=100$ then we know that there are $2^{100} - 1$ possible model. This is in the $O(10^{30})$ possible models. If we make the hypothesis that each model can be computed in $1$ second then, since in one year we have $31.536.000$ seconds, we are in the $O(10^{22})$ years!
+
+
+```{r, eval=FALSE}
+
+# Time evaluation
+
+require(tictoc)
+
+tic()
+
+#type here results at point d) to evaluate the time 
+
+Sys.sleep(1)
+toc()
+
+
+```
+
+## 2) Simulations and AIC
+
+In this exercise we would like to repeat the steps underlined above in the specific case of the Akaike information criterion.
+
+### a) Retrieve the values found up to point (c) of exercise 1.
+
+### b) Calculate the AIC for all possible models when $p = 5$ without using the predefined function present in R. Conclude on the best model.
+
+### c)  As for the previous exercise, suppose now that we increase the size of $\boldsymbol{\beta }$ to 100 (i.e. $p = 100$). Conclude on the feasibility of the task.
+
+```{r}
+
+# a) I will use the same X and y generated for the CV case.
+
+# b) 
+
+aic_val <- rep(0,length(res))
+
+for (i in 1:length(res)) {
+  
+  df <- data.frame(y,X[,res[[i]]])
+  
+  mod <- lm(df$y ~ .-1, data = df)
+  
+  aic_val[i] <- -2*logLik(mod) + 2*(length(res[[i]])+1)
+  
+}
+
+best_mod_aic <- res[[which.min(aic_val)]] 
+
+best_mod_aic
+
+# c) The same reasoning done for CV holds also here. Calculating the AIC is faster than CV but it would not impact the amount of time required for an exhaustive search which still remains unfeasible. 
+
+```
+
+### d) Compare the performance of CV and AIC by replicating 100 times the tasks of Exercise 1 and 2. This implies generating a new vector $\mathbf{y} =  \mathbf{X_{n*p}} \; \boldsymbol{\beta} + \boldsymbol{\epsilon}$ keeping fixed the matrix  $\mathbf{X_{n*p}}$, the population vector $\boldsymbol{\beta}$ and the data random split for the $2$-fold CV (i.e. only the $\epsilon_{i}$ are random in this setting). In particular you should compare CV and AIC in light of three specific criteria: the proportion of times the correct model is selected (\textit{Exact}), the proportion of times the selected model contains the correct one (\textit{Correct}) and the average number of selected regressors (\textit{Average $ \sharp $})
+
+```{r}
+
+n_sim <- 100
+
+exact <- matrix(data = 2*rep(0,n_sim),nrow = n_sim,ncol = 2) 
+
+correct <- matrix(data = 2*rep(0,n_sim),nrow = n_sim,ncol = 2)
+
+average <- matrix(data = 2*rep(0,n_sim),nrow = n_sim,ncol = 2)
+
+truth <- c(1,2,4)
+
+for (j in 1:n_sim) {
+  
+set.seed(j)
+
+eps <- rnorm(n,0,1)
+
+y <- X%*%beta + eps  
+
+# Split data
+y_train<- y[-index,]
+x_train<- X[-index,]
+y_test<- y[index,]
+x_test<-X[index,]
+
+cv_err <- matrix(data = rep(0,2*length(res)),nrow = length(res),ncol = 2)
+
+aic_val <- rep(0,length(res))
+
+for (i in 1:length(res)) {
+  
+  df_train <- data.frame(y_train,x_train[,res[[i]]])
+  
+  df_test <- data.frame(y_test,x_test[,res[[i]]])
+  
+  m_train <- lm(df_train$y_train ~ .-1, data = df_train)
+  
+  m_test <- lm(df_test$y_test ~ .-1, data = df_test)
+  
+  cv_err[i,1] <- t(y_test - as.matrix(x_test[,res[[i]]])%*%as.vector(m_train$coefficients))%*%
+    (y_test - as.matrix(x_test[,res[[i]]])%*%as.vector(m_train$coefficients))
+    
+  cv_err[i,2] <- t(y_train - as.matrix(x_train[,res[[i]]])%*%as.vector(m_test$coefficients))%*%
+    (y_train - as.matrix(x_train[,res[[i]]])%*%as.vector(m_test$coefficients))
+ 
+  df <- data.frame(y,X[,res[[i]]])
+  
+  mod <- lm(df$y ~ .-1, data = df)
+  
+  aic_val[i] <- -2*logLik(mod) + 2*(length(res[[i]])+1)
+   
+}
+
+best_mod_cv <- res[[which.min(rowMeans(cv_err))]] 
+
+best_mod_aic <- res[[which.min(aic_val)]]
+
+exact[j,] <- c(identical(best_mod_cv,truth),identical(best_mod_aic,truth))
+
+correct[j,] <- c(all(truth %in% best_mod_cv),all(truth %in% best_mod_aic))
+
+average[j,] <- c(length(best_mod_cv),length(best_mod_aic))
+
+}
+
+# CV
+
+cv_e <- sum(exact[,1])/n_sim
+
+cv_c <- sum(correct[,1])/n_sim
+
+cv_a <- mean(average[,1])
+
+c(cv_e, cv_c, cv_a)
+
+# AIC
+
+aic_e <- sum(exact[,2])/n_sim
+
+aic_c <- sum(correct[,2])/n_sim
+
+aic_a <- mean(average[,2])
+
+c(aic_e, aic_c,aic_a)
+
+```
+
+AIC is a parametric model selection criterion so when the model is correct (as in this case) it is designed to target the right quantity. On the other hand CV is non parametric thus inferior by construction in this setting. In real applications you should remember that our model assumption may not be met.
+
+## 3) Real Data Application (optional: does not count for the grade)
+
+Load the \href{https://github.com/CaesarXVII/Model-Selection-in-High-Dimensions/blob/master/datasets/malnutrion_zambia_cleaned.Rda}{\textit{Zambia}} dataset (see exercise 3 of Practical 1 for further info) and perform an exhaustive search on the continuous covariates (i.e. avoiding factors) based on CV and AIC in order to find the best model.\\
+
+You can either employ your codes derived in Exercise 1 and 2 or make use of the existing R packages: \textbf{leaps}, \textbf{glmulti}, \textbf{MuMIn} and \textbf{caret}.
+
+```{r,message=FALSE}
+
+data_zambia <- readRDS('malnutrion_zambia_cleaned.rds')
+
+data_zambia <- data_zambia[,c(1:7,21,22,24)] #exclude the factors from the analysis
+     
+### Exhaustive search with leaps (AIC case) ###
+     
+require(leaps)
+     
+regsubsets.out <- regsubsets(data_zambia$`Height for age sd` ~ .,data = data_zambia,nbest = 1,
+                             nvmax = NULL,    # NULL for no limit on number of variables
+                             force.in = NULL, force.out = NULL,method = "exhaustive")
+     
+summary(regsubsets.out)
+     
+
+plot(regsubsets.out) # BIC is default
+     
+     
+plot(regsubsets.out,scale = "Cp") #C_p case which is equivalent to AIC with a linear model
+    
+# Other packages for model selection 
+     
+### MumIn (AICc case) ###
+     
+require(MuMIn)
+     
+data_model <- lm(data_zambia$`Height for age sd` ~ .,data = data_zambia,na.action = "na.fail")
+     
+combinations <- dredge(data_model) #AICc search
+     
+### caret (CV case and AIC case) ###
+     
+require(caret)
+     
+attach(data_zambia)
+     
+# Unfortunately there is no exhaustive search based on CV in Caret, it is just stepwise.
+     
+     
+#setting up 10-fold cross-validation
+     
+     
+control <- trainControl(method="cv", number=10) 
+     
+     
+#finding the ideal model by AIC criterion
+     
+     
+model_AIC <- train(`Height for age sd`~.,data=data_zambia,method="lmStepAIC",trControl=control)
+     
+     
+#finding the ideal model by mean square error
+     
+     
+modelCV <- train(`Height for age sd`~.,data=data_zambia,method="lm",trControl=control)
+     
+     
+detach(data_zambia)
+     
+     
+# In order to do a full exhaustive search with CV, we should exploit the codes produced in exercise 1. Of course as the number of variables increase, the task becomes impossible.
+
+
+### Also glmulti package maybe used for the same purposes. Look at the function glmulti() for further information. ###
+ 
+
+```
+
+
+
